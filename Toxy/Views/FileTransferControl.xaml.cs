@@ -1,6 +1,11 @@
 ﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media.Imaging;
+using Toxy.Common;
 
 namespace Toxy.Views
 {
@@ -13,6 +18,7 @@ namespace Toxy.Views
         private int friendnumber;
         private string filename;
         private ulong filesize;
+        private TableCell fileTableCell;
 
         public delegate void OnAcceptDelegate(int friendnumber, int filenumber);
         public event OnAcceptDelegate OnAccept;
@@ -26,12 +32,15 @@ namespace Toxy.Views
         public delegate void OnFolderOpenDelegate();
         public event OnFolderOpenDelegate OnFolderOpen;
 
-        public FileTransferControl(string friendname, int friendnumber, int filenumber, string filename, ulong filesize)
+        public string FilePath { get; set; }
+
+        public FileTransferControl(string friendname, int friendnumber, int filenumber, string filename, ulong filesize, TableCell fileTableCell)
         {
             this.filenumber = filenumber;
             this.friendnumber = friendnumber;
             this.filesize = filesize;
             this.filename = filename;
+            this.fileTableCell = fileTableCell;
 
             InitializeComponent();
 
@@ -44,12 +53,22 @@ namespace Toxy.Views
             Dispatcher.BeginInvoke(((Action)(() => MessageLabel.Content = status)));
         }
 
-        public void TransferFinished()
+        public void TransferFinished(bool complete = true)
         {
             AcceptButton.Visibility = Visibility.Collapsed;
             DeclineButton.Visibility = Visibility.Collapsed;
             FileOpenButton.Visibility = Visibility.Visible;
             FolderOpenButton.Visibility = Visibility.Visible;
+            if (complete)
+            {
+                SetProgress(100);
+                if (File.Exists(FilePath))
+                {
+                    var uri = new Uri(FilePath);
+                    var absoluteUri = uri.AbsoluteUri;
+                    AddThumbnail(fileTableCell, absoluteUri);
+                }
+            }
         }
 
         public void SetProgress(int value)
@@ -96,6 +115,39 @@ namespace Toxy.Views
                 FileOpenButton.Visibility = Visibility.Collapsed;
                 FolderOpenButton.Visibility = Visibility.Collapsed;
             })));
+        }
+
+        private void AddThumbnail(TableCell messageTableCell, string message)
+        {
+            var task = new Task(() =>
+            {
+                try
+                {
+                    if (message.IsImage())
+                    {
+                        var imagePath = message;
+                        Dispatcher.Invoke(() =>
+                        {
+                            var thumbnail = new Paragraph();
+                            var image = new System.Windows.Controls.Image();
+                            var bitmapImage = new BitmapImage();
+
+                            bitmapImage.BeginInit();
+                            bitmapImage.UriSource = new Uri(imagePath);
+                            bitmapImage.EndInit();
+                            image.Source = bitmapImage;
+
+                            thumbnail.Inlines.Add(image);
+                            messageTableCell.Blocks.Add(thumbnail);
+                        });
+                    }
+                }
+                catch
+                {
+
+                }
+            });
+            task.Start();
         }
     }
 }

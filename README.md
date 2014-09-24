@@ -16,6 +16,7 @@ Feel free to contribute.
   - Friendlist
   - One to one conversations
   - Friendrequest listing
+* Avatars
 * Group chats
 * Audio calls
 * Video calls

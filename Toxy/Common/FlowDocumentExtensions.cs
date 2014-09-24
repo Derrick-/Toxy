@@ -70,14 +70,15 @@ namespace Toxy.Common
 
         public static FileTransfer AddNewFileTransfer(this FlowDocument doc, Tox tox, int friendnumber, int filenumber, string filename, ulong filesize, bool is_sender)
         {
-            FileTransferControl fileTransferControl = new FileTransferControl(tox.GetName(friendnumber), friendnumber, filenumber, filename, filesize);
-            FileTransfer transfer = new FileTransfer() { FriendNumber = friendnumber, FileNumber = filenumber, FileName = filename, FileSize = filesize, IsSender = is_sender, Control = fileTransferControl };
+            var fileTableCell = new TableCell();
+            var fileTransferControl = new FileTransferControl(tox.GetName(friendnumber), friendnumber, filenumber, filename, filesize, fileTableCell);
+            var transfer = new FileTransfer() { FriendNumber = friendnumber, FileNumber = filenumber, FileName = filename, FileSize = filesize, IsSender = is_sender, Control = fileTransferControl };
 
-            Section usernameParagraph = new Section();
-            TableRow newTableRow = new TableRow();
+            var usernameParagraph = new Section();
+            var newTableRow = new TableRow();
             newTableRow.Tag = transfer;
 
-            BlockUIContainer fileTransferContainer = new BlockUIContainer();
+            var fileTransferContainer = new BlockUIContainer();
             fileTransferControl.HorizontalAlignment = HorizontalAlignment.Stretch;
             fileTransferControl.HorizontalContentAlignment = HorizontalAlignment.Stretch;
             fileTransferContainer.Child = fileTransferControl;
@@ -85,13 +86,13 @@ namespace Toxy.Common
             usernameParagraph.Blocks.Add(fileTransferContainer);
             usernameParagraph.Padding = new Thickness(0);
 
-            TableCell fileTableCell = new TableCell();
-            fileTableCell.ColumnSpan = 2;
+            
+            fileTableCell.ColumnSpan = 3;
             fileTableCell.Blocks.Add(usernameParagraph);
             newTableRow.Cells.Add(fileTableCell);
             fileTableCell.Padding = new Thickness(0, 10, 0, 10);
 
-            TableRowGroup MessageRows = (TableRowGroup)doc.FindName("MessageRows");
+            var MessageRows = (TableRowGroup)doc.FindName("MessageRows");
             MessageRows.Rows.Add(newTableRow);
 
             return transfer;
