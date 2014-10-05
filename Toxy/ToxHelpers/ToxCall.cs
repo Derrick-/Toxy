@@ -15,24 +15,22 @@ namespace Toxy.ToxHelpers
 {
     class ToxCall
     {
-        private Tox tox;
         private ToxAv toxav;
 
-        private WaveIn waveSource;
-        private WaveOut waveOut;
         private VideoCaptureDevice videoSource;
-        private BufferedWaveProvider waveProvider;
         private VideoWindow videoWindow;
 
         private uint frame_size;
+        private WaveIn waveSource;
+        private WaveOut waveOut;
+        private BufferedWaveProvider waveProvider;
 
         public int CallIndex;
         public int FriendNumber;
         public bool VideoSupport;
 
-        public ToxCall(Tox tox, ToxAv toxav, int callindex, int friendnumber, bool videoSupport)
+        public ToxCall(ToxAv toxav, int callindex, int friendnumber, bool videoSupport)
         {
-            this.tox = tox;
             this.toxav = toxav;
             this.FriendNumber = friendnumber;
             this.VideoSupport = videoSupport;
@@ -42,14 +40,6 @@ namespace Toxy.ToxHelpers
 
         public void Start(int input, int output)
         {
-            if (WaveIn.DeviceCount < 1)
-                throw new Exception("Insufficient input device(s)!");
-
-            if (WaveOut.DeviceCount < 1)
-                throw new Exception("Insufficient output device(s)!");
-
-            frame_size = toxav.CodecSettings.AudioSampleRate * toxav.CodecSettings.AudioFrameDuration / 1000;
-
             //who doesn't love magic numbers?!
             toxav.PrepareTransmission(CallIndex, 3, 40, VideoSupport);
 
@@ -57,24 +47,29 @@ namespace Toxy.ToxHelpers
             waveProvider = new BufferedWaveProvider(format);
             waveProvider.DiscardOnBufferOverflow = true;
 
-            waveOut = new WaveOut();
+            if (WaveIn.DeviceCount > 0)
+            {
+                waveSource = new WaveIn();
 
-            if (output != -1)
-                waveOut.DeviceNumber = output;
+                if (input != -1)
+                    waveSource.DeviceNumber = input - 1;
 
-            waveOut.Init(waveProvider);
+                waveSource.WaveFormat = format;
+                waveSource.DataAvailable += wave_source_DataAvailable;
+                waveSource.BufferMilliseconds = (int)toxav.CodecSettings.AudioFrameDuration;
+                waveSource.StartRecording();
+            }
 
-            waveSource = new WaveIn();
+            if (WaveOut.DeviceCount > 0)
+            {
+                waveOut = new WaveOut();
 
-            if (input != -1)
-                waveSource.DeviceNumber = input;
+                if (output != -1)
+                    waveOut.DeviceNumber = output - 1;
 
-            waveSource.WaveFormat = format;
-            waveSource.DataAvailable += wave_source_DataAvailable;
-            waveSource.BufferMilliseconds = (int)toxav.CodecSettings.AudioFrameDuration;
-            waveSource.StartRecording();
-
-            waveOut.Play();
+                waveOut.Init(waveProvider);
+                waveOut.Play();
+            }
 
             //webcam detection stuff
             if (VideoSupport)
@@ -102,6 +97,9 @@ namespace Toxy.ToxHelpers
 
         public void ProcessAudioFrame(short[] frame, int frame_size)
         {
+            if (waveOut == null)
+                return;
+
             byte[] bytes = ShortArrayToByteArray(frame);
             waveProvider.AddSamples(bytes, 0, bytes.Length);
         }
